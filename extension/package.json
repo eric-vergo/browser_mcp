@@ -1,0 +1,9 @@
+{
+  "name": "docs-browser-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VSCode extension (Phase B) — serves docs and drives the Simple Browser pane. Stub; implemented next.",
+  "engines": {
+    "vscode": "^1.101.0"
+  }
+}

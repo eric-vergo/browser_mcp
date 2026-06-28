@@ -1,0 +1,15 @@
+{
+  "name": "browser-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "View auto-generated docs in VSCode's Simple Browser, driven by an MCP server (screenshot + navigation for Claude).",
+  "workspaces": [
+    "mcp-server",
+    "extension"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "build:mcp": "npm -w mcp-server run build",
+    "build:ext": "npm -w extension run build"
+  }
+}
