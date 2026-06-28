@@ -4,3 +4,4 @@ out/
 *.tsbuildinfo
 *.vsix
 .DS_Store
+.vscode/settings.json

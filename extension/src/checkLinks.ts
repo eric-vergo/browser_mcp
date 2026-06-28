@@ -4,6 +4,10 @@ import type { CrawlLinks, LinkReport } from "./types";
 
 const DEFAULT_MAX_PAGES = 500;
 const HREF_RE = /<a\s[^>]*href=["']([^"'#]+)/gi;
+// A page may set <base href="..."> (multi-page Verso output does, e.g. href="./../"),
+// which changes how the browser resolves that page's relative links. Honor it so we
+// resolve links the same way the browser does — otherwise nested pages report phantom 404s.
+const BASE_RE = /<base\s[^>]*href=["']([^"']+)["']/i;
 
 /** Site path key used for dedupe / orphan matching: decoded pathname + search. */
 function keyOf(u: URL): string {
@@ -86,13 +90,24 @@ export const crawlLinks: CrawlLinks = async (baseUrl, docsDir, startPath = "/", 
     }
 
     if (body !== null) {
+      // Resolve this page's relative links against its <base href> (if any), as a browser would.
+      let pageBase = url;
+      const bm = BASE_RE.exec(body);
+      if (bm) {
+        try {
+          pageBase = new URL(bm[1], url);
+        } catch {
+          /* malformed base: fall back to the page URL */
+        }
+      }
       let m: RegExpExecArray | null;
       HREF_RE.lastIndex = 0;
       while ((m = HREF_RE.exec(body)) !== null) {
         const raw = m[1];
+        if (raw.includes("${")) continue; // JS template-literal placeholder in inline markup, not a real link
         let next: URL;
         try {
-          next = new URL(raw, url);
+          next = new URL(raw, pageBase);
         } catch {
           continue;
         }
