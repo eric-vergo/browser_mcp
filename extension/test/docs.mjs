@@ -108,6 +108,13 @@ async function main() {
     ok(!report.orphans.some((o) => o.includes("index.html")),
       "index.html NOT orphan (reached via /)");
     ok(report.pagesVisited >= 3, `visited >= 3 pages (${report.pagesVisited})`);
+
+    // R2: configurable cap stops the crawl early and flags partial results.
+    const capped = await crawlLinks(srv2.baseUrl, fixture, "/", 1);
+    ok(capped.capped === true, "maxPages=1 sets capped=true");
+    ok(capped.pagesVisited === 1, `maxPages=1 visits exactly 1 page (${capped.pagesVisited})`);
+    const uncapped = await crawlLinks(srv2.baseUrl, fixture, "/");
+    ok(!uncapped.capped, "default cap not hit on small fixture (capped falsy)");
   } finally {
     await srv2.close();
     fs.rmSync(fixture, { recursive: true, force: true });

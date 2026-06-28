@@ -1,8 +1,13 @@
 .vscode/**
 src/**
+sidecar/**
+test/**
 **/*.ts
 **/*.map
 tsconfig.json
+build.mjs
+build-vsix.mjs
+run-integration.mjs
 *.vsix
 .gitignore
 node_modules/**

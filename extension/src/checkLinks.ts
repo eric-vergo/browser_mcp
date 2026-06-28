@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { CrawlLinks, LinkReport } from "./types";
 
-const MAX_PAGES = 500;
+const DEFAULT_MAX_PAGES = 500;
 const HREF_RE = /<a\s[^>]*href=["']([^"'#]+)/gi;
 
 /** Site path key used for dedupe / orphan matching: decoded pathname + search. */
@@ -36,7 +36,8 @@ function walkHtml(root: string, dir: string, out: string[]): void {
   }
 }
 
-export const crawlLinks: CrawlLinks = async (baseUrl, docsDir, startPath = "/"): Promise<LinkReport> => {
+export const crawlLinks: CrawlLinks = async (baseUrl, docsDir, startPath = "/", maxPages = DEFAULT_MAX_PAGES): Promise<LinkReport> => {
+  const cap = maxPages > 0 ? maxPages : DEFAULT_MAX_PAGES;
   const origin = new URL(baseUrl).origin;
   const start = new URL(startPath, baseUrl);
 
@@ -48,7 +49,7 @@ export const crawlLinks: CrawlLinks = async (baseUrl, docsDir, startPath = "/"):
   let capped = false;
 
   while (queue.length > 0) {
-    if (pagesVisited >= MAX_PAGES) {
+    if (pagesVisited >= cap) {
       capped = true;
       break;
     }
@@ -106,7 +107,7 @@ export const crawlLinks: CrawlLinks = async (baseUrl, docsDir, startPath = "/"):
   }
 
   if (capped) {
-    process.stderr.write(`crawlLinks: hit page cap (${MAX_PAGES}); crawl stopped early\n`);
+    process.stderr.write(`crawlLinks: hit page cap (${cap}); crawl stopped early\n`);
   }
 
   // Orphans: html files on disk whose site path was never visited.
@@ -118,7 +119,7 @@ export const crawlLinks: CrawlLinks = async (baseUrl, docsDir, startPath = "/"):
     orphans.push(sitePath);
   }
 
-  return { broken, orphans, pagesVisited };
+  return { broken, orphans, pagesVisited, capped };
 };
 
 /** A file is "reached" if its own path was visited, or (for index files) its directory was. */

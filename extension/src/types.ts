@@ -118,8 +118,9 @@ export interface LinkReport {
   broken: { url: string; status: number; linkedFrom: string }[];
   orphans: string[]; // html files in docsDir never reached by the crawl
   pagesVisited: number;
+  capped?: boolean; // true if the crawl hit the page cap and stopped early (results are partial)
 }
-export type CrawlLinks = (baseUrl: string, docsDir: string, startPath?: string) => Promise<LinkReport>;
+export type CrawlLinks = (baseUrl: string, docsDir: string, startPath?: string, maxPages?: number) => Promise<LinkReport>;
 
 // ───────────────────────── Tool context ─────────────────────────
 // Passed to tools.ts to build ToolDef[]. resolve() turns a site path or in-site URL into
@@ -130,5 +131,6 @@ export interface McpToolCtx {
   docsServer: DocsServer;
   crawlLinks: CrawlLinks;
   workspaceRoot: string; // for resolving relative screenshot savePath
+  maxCrawlPages?: number; // cap for check_links (docsBrowser.maxCrawlPages); undefined => crawler default
   resolve(target: string): { url: string; path: string };
 }

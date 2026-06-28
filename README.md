@@ -27,7 +27,7 @@ A `navigate` updates the pane **and** the Playwright page in the same handler �
 ## Requirements
 
 - Node.js ≥ 20 (developed on 25), VSCode ≥ 1.101, Claude Code.
-- A Chromium build for `playwright-core` (the shared `~/Library/Caches/ms-playwright` cache; downloaded on demand if missing).
+- A Chromium build for `playwright-core`. **Fetched automatically on first use** — the extension runs the `playwright-core` installer (shown as a progress notification) the first time a browser is needed, into the shared Playwright cache (`~/Library/Caches/ms-playwright` on macOS, `~/.cache/ms-playwright` on Linux, `%LOCALAPPDATA%\ms-playwright` on Windows). No manual step; subsequent runs reuse it.
 
 ## Setup
 
@@ -39,7 +39,17 @@ npm run install:ext  # builds + sideloads into ~/.vscode/extensions, carrying pl
 
 Then **Developer: Reload Window** in VSCode to activate. (Re-run `npm run install:ext` + reload after editing the extension — the installed copy is a snapshot.)
 
-Alternative install: `npm run package:ext` → `extension/docs-browser-extension.vsix` → Extensions view → Install from VSIX (remove any sideloaded copy first).
+Alternative install: `npm run package:ext` → `extension/docs-browser-extension.vsix` → Extensions view → Install from VSIX (remove any sideloaded copy first). The `.vsix` bundles `playwright-core`, so it installs cleanly on another machine; Chromium is still fetched on first use. (Building the `.vsix` requires the `zip` CLI on the build machine; installing it does not.)
+
+## Use in another project
+
+The extension is installed **per user** (in `~/.vscode/extensions`), so once installed it's available to every VSCode window — you don't reinstall per project. To use it in another project:
+
+1. **Point it at your docs.** Set `docsBrowser.docsDir` (workspace setting) to your generated HTML output directory (relative to the workspace root, or absolute). Activity Bar → Docs Browser → the gear, or run `Docs Browser: Open Settings`.
+2. **Register the MCP server.** Run **`Docs Browser: Create MCP config (.mcp.json)`** from the Command Palette (or the view title bar). It writes/merges a `.mcp.json` in the workspace root pointing Claude Code at the hosted server, preserving any other servers already listed.
+3. **Reload** the window, then start Claude Code in that folder (run `/mcp` if the tools don't connect immediately).
+
+That's it — no per-project build or install. Note the **single-window / fixed-port** assumption below if you keep multiple projects open at once.
 
 ## Connect Claude Code
 
@@ -53,8 +63,8 @@ The extension activates on VSCode startup and binds `127.0.0.1:8765` (configurab
 
 ## Usage
 
-- **Activity Bar → Docs Browser**: an "Open Docs Browser" button + a clickable page list + Open/Refresh.
-- **Command Palette**: `Docs Browser: Open`, `Docs Browser: Refresh`.
+- **Activity Bar → Docs Browser**: an "Open Docs Browser" button + a clickable page list + Open/Refresh; when no docs are found yet, a welcome panel links to the docs-directory setting and the MCP-config command.
+- **Command Palette**: `Docs Browser: Open`, `Docs Browser: Refresh`, `Docs Browser: Create MCP config (.mcp.json)`, `Docs Browser: Open Settings`.
 - **From Claude**: navigate/screenshot/etc.; the pane mirrors what Claude does.
 
 ### MCP tools
@@ -77,6 +87,7 @@ The extension activates on VSCode startup and binds `127.0.0.1:8765` (configurab
 
 - `docsBrowser.docsDir` (default `docs`) — directory of generated HTML to serve.
 - `docsBrowser.mcpPort` (default `8765`) — fixed MCP port (strict; fails loudly on conflict).
+- `docsBrowser.maxCrawlPages` (default `500`) — page cap for `check_links`; raise for large doc sets (`check_links` warns when the cap is hit). Applied at activation.
 
 ## Layout
 
@@ -86,7 +97,8 @@ extension/
               paneController.ts, browserClient.ts, docsServer.ts, checkLinks.ts
   sidecar/    main.ts          # Playwright child process
   test/       *.mjs + integration.ts   # standalone module + integration tests
-  build.mjs   # esbuild (extension + sidecar)
+  build.mjs       # esbuild (extension + sidecar)
+  build-vsix.mjs  # package a .vsix (bundle + inject playwright-core)
 docs/         # sample docs (replace with your generated output)
 .mcp.json     # Claude Code MCP registration (http)
 scripts/install-extension.sh

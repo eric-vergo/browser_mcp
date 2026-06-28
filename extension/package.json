@@ -24,16 +24,19 @@
       ]
     },
     "viewsWelcome": [
-      { "view": "docsBrowser.pages", "contents": "Open a folder with generated HTML docs, then launch the browser.\n[Open Docs Browser](command:docsBrowser.open)" }
+      { "view": "docsBrowser.pages", "contents": "No documentation found yet.\n\nPoint the extension at your generated HTML docs by setting the docs directory, then open the browser.\n[Set docs directory](command:docsBrowser.openSettings)\n[Open Docs Browser](command:docsBrowser.open)\n\nTo let Claude Code drive the docs, add the MCP config to this workspace:\n[Create .mcp.json](command:docsBrowser.createMcpConfig)" }
     ],
     "commands": [
       { "command": "docsBrowser.open", "title": "Open", "category": "Docs Browser", "icon": "$(open-preview)" },
-      { "command": "docsBrowser.refresh", "title": "Refresh", "category": "Docs Browser", "icon": "$(refresh)" }
+      { "command": "docsBrowser.refresh", "title": "Refresh", "category": "Docs Browser", "icon": "$(refresh)" },
+      { "command": "docsBrowser.createMcpConfig", "title": "Create MCP config (.mcp.json)", "category": "Docs Browser", "icon": "$(plug)" },
+      { "command": "docsBrowser.openSettings", "title": "Open Settings", "category": "Docs Browser", "icon": "$(gear)" }
     ],
     "menus": {
       "view/title": [
         { "command": "docsBrowser.open", "when": "view == docsBrowser.pages", "group": "navigation@1" },
-        { "command": "docsBrowser.refresh", "when": "view == docsBrowser.pages", "group": "navigation@2" }
+        { "command": "docsBrowser.refresh", "when": "view == docsBrowser.pages", "group": "navigation@2" },
+        { "command": "docsBrowser.createMcpConfig", "when": "view == docsBrowser.pages", "group": "1_config@1" }
       ]
     },
     "configuration": {
@@ -48,6 +51,11 @@
           "type": "number",
           "default": 8765,
           "description": "Fixed port for the hosted MCP HTTP server (referenced by .mcp.json). On conflict the extension fails loudly rather than picking another port."
+        },
+        "docsBrowser.maxCrawlPages": {
+          "type": "number",
+          "default": 500,
+          "description": "Maximum pages the check_links crawler visits before stopping. Raise this for large generated doc sets; check_links warns when the cap is hit. Applied at activation (reload to change)."
         }
       }
     }
@@ -55,7 +63,7 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "package": "vsce package --no-dependencies --allow-missing-repository -o docs-browser-extension.vsix"
+    "package": "node build-vsix.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

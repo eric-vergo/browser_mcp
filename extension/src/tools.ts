@@ -136,8 +136,9 @@ export function buildTools(ctx: McpToolCtx): ToolDef[] {
       description: "Crawl internal links across the doc set from a start path (default home) and report broken targets + orphan pages.",
       inputSchema: { startPath: z.string().optional() },
       handler: async (a) => {
-        const r = await ctx.crawlLinks(ctx.docsServer.baseUrl, ctx.docsServer.docsDir, (a.startPath as string | undefined) ?? "/");
+        const r = await ctx.crawlLinks(ctx.docsServer.baseUrl, ctx.docsServer.docsDir, (a.startPath as string | undefined) ?? "/", ctx.maxCrawlPages);
         const parts = [`Visited ${r.pagesVisited} page(s).`];
+        if (r.capped) parts.push(`WARNING: hit the ${r.pagesVisited}-page crawl cap; results are PARTIAL. Raise "docsBrowser.maxCrawlPages" for full coverage.`);
         parts.push(r.broken.length ? `Broken (${r.broken.length}):\n` + r.broken.map((b) => `- ${b.status || "ERR"} ${b.url}  (from ${b.linkedFrom})`).join("\n") : "No broken links.");
         parts.push(r.orphans.length ? `Orphans (${r.orphans.length}):\n` + r.orphans.map((o) => `- ${o}`).join("\n") : "No orphan pages.");
         return text(parts.join("\n\n"));
