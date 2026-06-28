@@ -5,7 +5,7 @@ import { z } from "zod";
 import fs from "node:fs";
 import path from "node:path";
 import { getPage, closeBrowser, serial } from "./browser.js";
-import { resolveDocsTarget, resolveUrl, paneSync, closeFallback, docsDir } from "./docsClient.js";
+import { resolveDocsTarget, resolveUrl, paneSync, closeFallback, docsDir, workspaceRoot } from "./docsClient.js";
 
 const server = new McpServer({ name: "docs-browser", version: "0.1.0" });
 
@@ -51,16 +51,23 @@ server.registerTool(
   {
     title: "Screenshot",
     description:
-      "Capture a PNG screenshot of the current docs page. Viewport-only by default; set fullPage=true to capture the whole page (larger — counts against the MCP output token budget).",
-    inputSchema: { fullPage: z.boolean().optional() },
+      "Capture a PNG screenshot of the current docs page. Viewport-only by default; set fullPage=true to capture the whole page (larger — counts against the MCP output token budget). Set savePath to also write the PNG to disk (relative paths resolve against the workspace root) — useful for saving reference screenshots to compare against.",
+    inputSchema: { fullPage: z.boolean().optional(), savePath: z.string().optional() },
   },
-  ({ fullPage }) =>
+  ({ fullPage, savePath }) =>
     serial(async () => {
       const page = await getPage();
       const buf = await page.screenshot({ fullPage: fullPage ?? false });
-      return {
-        content: [{ type: "image" as const, data: buf.toString("base64"), mimeType: "image/png" }],
-      };
+      const content: Array<
+        { type: "image"; data: string; mimeType: string } | { type: "text"; text: string }
+      > = [{ type: "image", data: buf.toString("base64"), mimeType: "image/png" }];
+      if (savePath) {
+        const abs = path.isAbsolute(savePath) ? savePath : path.join(workspaceRoot(), savePath);
+        fs.mkdirSync(path.dirname(abs), { recursive: true });
+        fs.writeFileSync(abs, buf);
+        content.push({ type: "text", text: `Saved screenshot to ${abs}` });
+      }
+      return { content };
     }),
 );
 

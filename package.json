@@ -10,6 +10,9 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "build:mcp": "npm -w mcp-server run build",
-    "build:ext": "npm -w extension run build"
+    "build:ext": "npm -w extension run build",
+    "postinstall": "playwright install chromium",
+    "install:ext": "bash scripts/install-extension.sh",
+    "package:ext": "npm -w extension run package"
   }
 }

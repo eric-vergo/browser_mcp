@@ -35,6 +35,8 @@ export function lockfilePath(): string {
 
 interface Lockfile {
   baseUrl: string;
+  /** Where the extension's /__control__/* endpoint lives (== baseUrl in default mode). */
+  controlBaseUrl?: string;
   port: number;
 }
 
@@ -65,7 +67,8 @@ export async function resolveDocsTarget(): Promise<DocsTarget> {
   const lf = readLockfile();
   if (lf) {
     const baseUrl = lf.baseUrl.replace(/\/+$/, "");
-    return { baseUrl, controlUrl: baseUrl };
+    const controlUrl = (lf.controlBaseUrl ?? lf.baseUrl).replace(/\/+$/, "");
+    return { baseUrl, controlUrl };
   }
 
   if (!fallback) {

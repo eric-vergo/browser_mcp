@@ -1,9 +1,80 @@
 {
   "name": "docs-browser-extension",
+  "displayName": "Docs Browser",
   "version": "0.1.0",
   "private": true,
-  "description": "VSCode extension (Phase B) — serves docs and drives the Simple Browser pane. Stub; implemented next.",
+  "description": "Serve auto-generated docs and drive the VSCode Simple Browser pane; pairs with the docs-browser MCP server.",
+  "publisher": "local",
   "engines": {
     "vscode": "^1.101.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "docsBrowser",
+          "title": "Docs Browser",
+          "icon": "media/docs.svg"
+        }
+      ]
+    },
+    "views": {
+      "docsBrowser": [
+        {
+          "id": "docsBrowser.pages",
+          "name": "Documentation"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "docsBrowser.pages",
+        "contents": "Open a folder containing generated HTML docs, then launch the browser.\n[Open Docs Browser](command:docsBrowser.open)"
+      }
+    ],
+    "commands": [
+      { "command": "docsBrowser.open", "title": "Open", "category": "Docs Browser", "icon": "$(open-preview)" },
+      { "command": "docsBrowser.refresh", "title": "Refresh", "category": "Docs Browser", "icon": "$(refresh)" }
+    ],
+    "menus": {
+      "view/title": [
+        { "command": "docsBrowser.open", "when": "view == docsBrowser.pages", "group": "navigation@1" },
+        { "command": "docsBrowser.refresh", "when": "view == docsBrowser.pages", "group": "navigation@2" }
+      ]
+    },
+    "configuration": {
+      "title": "Docs Browser",
+      "properties": {
+        "docsBrowser.docsDir": {
+          "type": "string",
+          "default": "docs",
+          "description": "Directory (relative to the workspace, or absolute) of generated HTML docs to serve."
+        },
+        "docsBrowser.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Optional: base URL of an existing docs server. If set, the extension serves only the control endpoint and does not host files."
+        },
+        "docsBrowser.controlPort": {
+          "type": "number",
+          "default": 0,
+          "description": "Port for the docs/control server. 0 = ephemeral (recommended)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch",
+    "vscode:prepublish": "npm run build",
+    "package": "vsce package --no-dependencies --allow-missing-repository -o docs-browser-extension.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.101.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.6.0"
   }
 }
