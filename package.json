@@ -1,17 +1,14 @@
 {
   "name": "browser-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "View auto-generated docs in VSCode's Simple Browser, driven by an MCP server (screenshot + navigation for Claude).",
+  "description": "Single VSCode extension: real-DOM docs pane + co-located Playwright + hosted MCP for AI-driven documentation development.",
   "workspaces": [
-    "mcp-server",
     "extension"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "build:mcp": "npm -w mcp-server run build",
-    "build:ext": "npm -w extension run build",
-    "postinstall": "playwright install chromium",
+    "build": "npm -w extension run build",
+    "typecheck": "npm -w extension run typecheck",
     "install:ext": "bash scripts/install-extension.sh",
     "package:ext": "npm -w extension run package"
   }

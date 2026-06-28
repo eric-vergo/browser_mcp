@@ -13,10 +13,14 @@ DEST="$HOME/.vscode/extensions/${NAME}"
 npm -w extension run build
 
 rm -rf "$DEST"
-mkdir -p "$DEST"
+mkdir -p "$DEST/node_modules"
 cp extension/package.json "$DEST/"
 cp -R extension/dist "$DEST/dist"
 cp -R extension/media "$DEST/media"
+# The Playwright sidecar (dist/sidecar/main.js) keeps playwright-core EXTERNAL, so it must be
+# resolvable at runtime. playwright-core is self-contained (no deps); copy it alongside.
+cp -R node_modules/playwright-core "$DEST/node_modules/playwright-core"
 
 echo "Installed ${NAME} -> ${DEST}"
-echo "Run 'Developer: Reload Window' in VSCode to activate."
+echo "Chromium uses the shared ~/Library/Caches/ms-playwright cache (already present)."
+echo "Run 'Developer: Reload Window' in VSCode to activate; the MCP server binds 127.0.0.1:8765."

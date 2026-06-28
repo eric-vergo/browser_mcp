@@ -1,13 +1,8 @@
 {
   "mcpServers": {
     "docs-browser": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["${CLAUDE_PROJECT_DIR:-.}/mcp-server/dist/index.js"],
-      "env": {
-        "DOCS_DIR": "${CLAUDE_PROJECT_DIR:-.}/docs"
-      },
-      "timeout": 600000
+      "type": "http",
+      "url": "http://127.0.0.1:8765/mcp"
     }
   }
 }

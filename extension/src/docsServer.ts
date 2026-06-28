@@ -1,20 +1,7 @@
 import * as http from "node:http";
 import * as fs from "node:fs";
 import * as path from "node:path";
-
-export interface DocsServerHooks {
-  version: string;
-  /** Show a site-relative path in the Simple Browser pane. */
-  onShow: (urlPath: string) => void;
-  /** Reload the currently shown page. */
-  onReload: () => void;
-}
-
-export interface DocsServer {
-  baseUrl: string;
-  port: number;
-  close: () => Promise<void>;
-}
+import type { StartDocsServer } from "./types";
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -49,6 +36,7 @@ function serveStatic(docsDir: string, req: http.IncomingMessage, res: http.Serve
   }
   const root = path.resolve(docsDir);
   let filePath = path.resolve(root, pathname.replace(/^\/+/, ""));
+  // Path-traversal guard: reject anything resolving outside docsDir.
   if (filePath !== root && !filePath.startsWith(root + path.sep)) {
     res.statusCode = 403;
     res.end("Forbidden");
@@ -70,70 +58,42 @@ function serveStatic(docsDir: string, req: http.IncomingMessage, res: http.Serve
 }
 
 /**
- * One loopback HTTP server that serves the docs directory AND exposes the
- * /__control__/* endpoint the MCP server uses to drive the pane. Pass
- * docsDir=null for "external docs server" mode (control routes only).
+ * One loopback HTTP server that serves the docs directory as static files.
+ * strictPort: binds the requested port on 127.0.0.1 and rejects on EADDRINUSE
+ * rather than auto-picking another port. The MCP server is now in-process, so
+ * there are no control routes here.
  */
-export async function startDocsServer(
-  docsDir: string | null,
-  port: number,
-  hooks: DocsServerHooks,
-): Promise<DocsServer> {
-  const server = http.createServer((req, res) => {
-    const url = req.url || "/";
-    if (url.startsWith("/__control__/")) {
-      handleControl(req, res, url.split("?")[0], hooks);
-      return;
-    }
-    if (docsDir) {
-      serveStatic(docsDir, req, res);
-    } else {
-      res.statusCode = 404;
-      res.end("No docs served (external baseUrl mode)");
-    }
-  });
+export const startDocsServer: StartDocsServer = (docsDir, port) =>
+  new Promise((resolve, reject) => {
+    const root = path.resolve(docsDir);
+    const server = http.createServer((req, res) => serveStatic(root, req, res));
 
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(port, "127.0.0.1", () => resolve());
-  });
-
-  const addr = server.address();
-  const boundPort = typeof addr === "object" && addr ? addr.port : port;
-  return {
-    baseUrl: `http://127.0.0.1:${boundPort}`,
-    port: boundPort,
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
-  };
-}
-
-function handleControl(
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  url: string,
-  hooks: DocsServerHooks,
-): void {
-  if (req.method === "GET" && url === "/__control__/info") {
-    res.setHeader("content-type", "application/json");
-    res.end(JSON.stringify({ version: hooks.version }));
-    return;
-  }
-  if (req.method === "POST" && (url === "/__control__/show" || url === "/__control__/reload")) {
-    let body = "";
-    req.on("data", (c) => (body += c));
-    req.on("end", () => {
-      try {
-        const data = body ? (JSON.parse(body) as { path?: string }) : {};
-        if (url === "/__control__/show") hooks.onShow(typeof data.path === "string" ? data.path : "/");
-        else hooks.onReload();
-      } catch {
-        // ignore malformed body
+    const onError = (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        reject(new Error(`docsServer: port ${port} is already in use (strictPort, not auto-picking)`));
+      } else {
+        reject(new Error(`docsServer: failed to bind port ${port}: ${err.message}`));
       }
-      res.statusCode = 204;
-      res.end();
+    };
+    server.once("error", onError);
+
+    server.listen(port, "127.0.0.1", () => {
+      server.removeListener("error", onError);
+      // Swallow late runtime errors to stderr instead of crashing the host.
+      server.on("error", (err) => process.stderr.write(`docsServer: runtime error: ${String(err)}\n`));
+      const addr = server.address();
+      const boundPort = typeof addr === "object" && addr ? addr.port : port;
+      process.stderr.write(`docsServer: serving ${root} at http://127.0.0.1:${boundPort}\n`);
+      resolve({
+        baseUrl: `http://127.0.0.1:${boundPort}`,
+        port: boundPort,
+        docsDir: root,
+        close: () =>
+          new Promise<void>((res) => {
+            server.close(() => res());
+            // Drop keep-alive sockets so close() does not hang.
+            server.closeAllConnections?.();
+          }),
+      });
     });
-    return;
-  }
-  res.statusCode = 404;
-  res.end("Not found");
-}
+  });
